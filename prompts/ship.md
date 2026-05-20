@@ -1,4 +1,4 @@
-Walk through the full ship checklist for the current working changes. Follow each step in order and stop to confirm before destructive git operations.
+# Walk through the full ship checklist for the current working changes. Follow each step in order and stop to confirm before destructive git operations
 
 ## Ticket / Subtask
 
@@ -14,13 +14,13 @@ Walk through the full ship checklist for the current working changes. Follow eac
 
 ## Branch
 
-5. Check the current branch (git branch --show-current).
+1. Check the current branch (git branch --show-current).
 
-6. The correct branch name format is {{TEAM_PREFIX}}-XXXX-short-description where {{TEAM_PREFIX}}-XXXX is the ticket or subtask key and the description is a few hyphenated lowercase words.
+2. The correct branch name format is {{TEAM_PREFIX}}-XXXX-short-description where {{TEAM_PREFIX}}-XXXX is the ticket or subtask key and the description is a few hyphenated lowercase words.
 
-7. If the current branch already matches this format for the correct ticket, stay on it.
+3. If the current branch already matches this format for the correct ticket, stay on it.
 
-8. If the branch is wrong or is main:
+4. If the branch is wrong or is main:
    a. Stash uncommitted changes: git stash push -m "ship: pre-branch stash"
    b. Switch to main and pull: git checkout main && git pull
    c. Create the new branch: git checkout -b {{TEAM_PREFIX}}-XXXX-short-description
@@ -29,32 +29,35 @@ Walk through the full ship checklist for the current working changes. Follow eac
 
 ## Stage & Commit
 
-9. Show the current diff (git diff and git status).
+1. Show the current diff (git diff and git status).
 
-10. Stage the relevant files. If there are unrelated changes in the working tree, ask which files to include.
+2. Stage the relevant files. If there are unrelated changes in the working tree, ask which files to include.
 
-11. Commit using this format exactly:
-    {{TEAM_PREFIX}}-XXXX short description of what this commit does
-    The {{TEAM_PREFIX}}-XXXX should match the ticket/subtask number.
+3. Commit using this format exactly:
+   {{TEAM_PREFIX}}-XXXX short description of what this commit does
+   The {{TEAM_PREFIX}}-XXXX should match the ticket/subtask number.
 
 ## Pull Request
 
-12. Push the branch: git push -u origin <branch>.
+1. Push the branch: git push -u origin `branch`.
 
-13. Open a PR with gh pr create using:
-    - Title: {{TEAM_PREFIX}}-XXXX Short description
-    - Body:
-      ## Summary
-      <2-3 bullet points of what changed and why; leave out implementation details>
+2. Open a PR with gh pr create using:
+   - Title: {{TEAM_PREFIX}}-XXXX Short description
+   - Body:
 
-      ## Testing
-      - [ ] <key thing to verify manually>
-      - [ ] <regression check if applicable>
+     ## Summary
 
-      Jira: [{{TEAM_PREFIX}}-XXXX]({{JIRA_BASE_URL}}/browse/{{TEAM_PREFIX}}-XXXX)
+     <2-3 bullet points of what changed and why; leave out implementation details>
 
-14. Report the PR URL and update the footer mr context with the link.
+     ## Testing
+
+     - [ ] key thing to verify manually
+     - [ ] regression check if applicable
+
+     Jira: [{{TEAM_PREFIX}}-XXXX]({{JIRA_BASE_URL}}/browse/{{TEAM_PREFIX}}-XXXX)
+
+3. Report the PR URL and update the footer mr context with the link.
 
 ## Update Jira
 
-15. Move the Jira ticket to Code Review using jira_transition.
+1. Move the Jira ticket to Code Review using jira_transition.
