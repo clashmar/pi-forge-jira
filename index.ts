@@ -19,8 +19,15 @@
  *   JIRA_ASSIGNEE_ID    - account ID to auto-assign sub-tasks to
  */
 
+import { readFileSync } from "fs";
+import { join } from "path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "typebox";
+
+// ── Prompt templates ──────────────────────────────────────────────────────────
+
+const SHIP_PROMPT = readFileSync(join(__dirname, "prompts/ship.md"), "utf-8");
+const TICKET_PROMPT = readFileSync(join(__dirname, "prompts/ticket.md"), "utf-8");
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -28,6 +35,7 @@ const BOARD_ID = process.env.JIRA_BOARD_ID ?? "275";
 const SUBTASK_TYPE_ID = process.env.JIRA_SUBTASK_TYPE ?? "5";
 const ASSIGNEE_ACCOUNT_ID =
   process.env.JIRA_ASSIGNEE_ID ?? "712020:a73621b6-1c28-46b9-815a-d5cd8da82987";
+const TEAM_PREFIX = process.env.JIRA_TEAM_PREFIX ?? "";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -340,12 +348,12 @@ export default function jiraExtension(pi: ExtensionAPI) {
     promptSnippet:
       "Fetch Jira ticket details (summary, description, status, comments)",
     promptGuidelines: [
-      "Use jira_ticket to fetch ticket details when the user mentions a Jira ticket key like PHOEN-123",
+      "Use jira_ticket to fetch ticket details when the user mentions a Jira ticket key like TEAM-123",
       "After fetching a ticket with jira_ticket, also call set_context to track it in the footer",
     ],
     parameters: Type.Object({
       key: Type.String({
-        description: 'Jira issue key, e.g. "PHOEN-123"',
+        description: 'Jira issue key, e.g. "TEAM-123"',
       }),
     }),
     async execute(_id, params, _signal, _onUpdate, _ctx) {
@@ -383,7 +391,7 @@ export default function jiraExtension(pi: ExtensionAPI) {
     ],
     parameters: Type.Object({
       parentKey: Type.String({
-        description: 'The parent ticket key, e.g. "PHOEN-2328"',
+        description: 'The parent ticket key, e.g. "TEAM-2328"',
       }),
       summary: Type.String({
         description:
@@ -431,7 +439,7 @@ export default function jiraExtension(pi: ExtensionAPI) {
     ],
     parameters: Type.Object({
       key: Type.String({
-        description: 'Jira issue key, e.g. "PHOEN-2342"',
+        description: 'Jira issue key, e.g. "TEAM-2342"',
       }),
       status: Type.String({
         description:
@@ -501,11 +509,11 @@ export default function jiraExtension(pi: ExtensionAPI) {
 
   pi.registerCommand("ticket", {
     description:
-      "Load a Jira ticket, set up a branch, and start planning (e.g. /ticket PHOEN-123 [subtask summary])",
+      "Load a Jira ticket, set up a branch, and start planning (e.g. /ticket TEAM-123 [subtask summary])",
     handler: async (args, ctx) => {
       if (!args?.trim()) {
         ctx.ui.notify(
-          "Usage: /ticket PHOEN-123 [optional subtask summary]",
+          "Usage: /ticket TEAM-123 [optional subtask summary]",
           "error"
         );
         return;
@@ -513,9 +521,10 @@ export default function jiraExtension(pi: ExtensionAPI) {
 
       const parts = args.trim().split(/\s+/);
       const rawKey = parts[0];
-      const key = /^\d+$/.test(rawKey)
-        ? `PHOEN-${rawKey}`
-        : rawKey.toUpperCase();
+      const key =
+        TEAM_PREFIX && /^\d+$/.test(rawKey)
+          ? `${TEAM_PREFIX}-${rawKey}`
+          : rawKey.toUpperCase();
       const subtaskSummary = parts.slice(1).join(" ");
 
       const subtaskInstruction = subtaskSummary
@@ -523,36 +532,10 @@ export default function jiraExtension(pi: ExtensionAPI) {
         : `No subtask summary was provided — work directly against ${key}.`;
 
       pi.sendUserMessage(
-        `Load ticket ${key}. Work through each step in order.
-
-## 1. Load the Ticket
-
-Fetch ${key} with jira_ticket and show:
-- Title, status, description
-- Any existing subtasks and their statuses
-- Any linked tickets or blockers
-
-Update the footer with set_context (ticket link).
-
-## 2. Subtask
-
-${subtaskInstruction}
-
-## 3. Branch Setup
-
-Check the current branch (git branch --show-current).
-The correct branch name format is: PHOEN-XXXX-short-description
-
-If already on the correct branch: confirm and move on.
-If on a different branch or on main:
-1. Stash uncommitted changes: git stash push -m "ticket: pre-branch stash"
-2. Switch to main and pull: git checkout main && git pull
-3. Create the new branch: git checkout -b PHOEN-XXXX-short-description
-4. If stash was made, pop it: git stash pop — confirm it applied cleanly.
-
-## 4. Planning
-
-Invoke the planning skill to turn the ticket requirements into a design before any code is written. Before asking any questions, explore relevant project context using parallel subagents. Follow the full planning process through to an approved design and written spec.`
+        TICKET_PROMPT
+          .replace(/\{\{KEY\}\}/g, key)
+          .replace("{{SUBTASK_INSTRUCTION}}", subtaskInstruction)
+          .replace(/\{\{TEAM_PREFIX\}\}/g, TEAM_PREFIX)
       );
     },
   });
@@ -560,74 +543,24 @@ Invoke the planning skill to turn the ticket requirements into a design before a
   // ── /ship command ─────────────────────────────────────────────────────────
 
   pi.registerCommand("ship", {
-    description: "Stage, commit and open a PR (e.g. /ship [PHOEN-XXXX])",
+    description: "Stage, commit and open a PR (e.g. /ship [TEAM-XXXX])",
     handler: async (args, _ctx) => {
       const rawKey = args?.trim() ?? "";
+      const normalisedKey =
+        TEAM_PREFIX && /^\d+$/.test(rawKey)
+          ? `${TEAM_PREFIX}-${rawKey}`
+          : rawKey.toUpperCase();
       const keyInstruction = rawKey
-        ? `The ticket key is ${/^\d+$/.test(rawKey) ? `PHOEN-${rawKey}` : rawKey.toUpperCase()}.`
-        : `Check the current branch name for a PHOEN-XXXX prefix and use that. If no information is available, ask which ticket this work belongs to.`;
+        ? `The ticket key is ${normalisedKey}.`
+        : `Check the current branch name for a TEAM-XXXX prefix and use that. If no information is available, ask which ticket this work belongs to.`;
+
+      const baseUrl = process.env.JIRA_BASE_URL?.replace(/\/$/, "") ?? "";
 
       pi.sendUserMessage(
-        `Walk through the full ship checklist for the current working changes. Follow each step in order and stop to confirm before destructive git operations.
-
-## Ticket / Subtask
-
-1. Identify the relevant Jira ticket: ${keyInstruction}
-
-2. Fetch the ticket with jira_ticket and show its title and status.
-
-3. Decide whether a subtask is needed:
-   - If the changes represent the whole ticket's scope, work against the parent ticket.
-   - If the changes are a focused slice of a larger ticket, create a subtask with jira_create_subtask. Use the resulting subtask key going forward.
-
-4. Update the footer context with set_context (ticket link).
-
-## Branch
-
-5. Check the current branch (git branch --show-current).
-
-6. The correct branch name format is PHOEN-XXXX-short-description where PHOEN-XXXX is the ticket or subtask key and the description is a few hyphenated lowercase words.
-
-7. If the current branch already matches this format for the correct ticket, stay on it.
-
-8. If the branch is wrong or is main:
-   a. Stash uncommitted changes: git stash push -m "ship: pre-branch stash"
-   b. Switch to main and pull: git checkout main && git pull
-   c. Create the new branch: git checkout -b PHOEN-XXXX-short-description
-   d. Pop the stash: git stash pop
-   e. Confirm the stash applied cleanly before continuing.
-
-## Stage & Commit
-
-9. Show the current diff (git diff and git status).
-
-10. Stage the relevant files. If there are unrelated changes in the working tree, ask which files to include.
-
-11. Commit using this format exactly:
-    PHOEN-XXXX short description of what this commit does
-    The PHOEN-XXXX should match the ticket/subtask number.
-
-## Pull Request
-
-12. Push the branch: git push -u origin <branch>.
-
-13. Open a PR with gh pr create using:
-    - Title: PHOEN-XXXX Short description
-    - Body:
-      ## Summary
-      <2-3 bullet points of what changed and why; leave out implementation details>
-
-      ## Testing
-      - [ ] <key thing to verify manually>
-      - [ ] <regression check if applicable>
-
-      Jira: [PHOEN-XXXX](https://forgeholidays.atlassian.net/browse/PHOEN-XXXX)
-
-14. Report the PR URL and update the footer mr context with the link.
-
-## Update Jira
-
-15. Move the Jira ticket to Code Review using jira_transition.`
+        SHIP_PROMPT
+          .replace("{{KEY_INSTRUCTION}}", keyInstruction)
+          .replace(/\{\{TEAM_PREFIX\}\}/g, TEAM_PREFIX)
+          .replace(/\{\{JIRA_BASE_URL\}\}/g, baseUrl)
       );
     },
   });

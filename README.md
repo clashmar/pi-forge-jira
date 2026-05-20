@@ -12,6 +12,7 @@ Set these in your `~/.zshrc`:
 export JIRA_BASE_URL="https://your-organization.atlassian.net"
 export JIRA_EMAIL="you@your-organization.com"
 export JIRA_API_TOKEN="..."  # https://id.atlassian.com/manage-profile/security/api-tokens
+export JIRA_TEAM_PREFIX="TEAM"  # your Jira team prefix, e.g. PHOEN, ACME, ENG
 ```
 
 ## Install
@@ -59,6 +60,7 @@ Optional environment variables with their defaults:
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
+| `JIRA_TEAM_PREFIX` | (required for shorthand) | Your Jira team prefix (e.g. `PHOEN`) — enables `/ticket 2400` shorthand |
 | `JIRA_BOARD_ID` | `275` | Board ID for sprint lookup |
 | `JIRA_SUBTASK_TYPE` | `5` | Jira issue type ID for sub-tasks |
 | `JIRA_ASSIGNEE_ID` | My account ID | Account ID for auto-assignment |
