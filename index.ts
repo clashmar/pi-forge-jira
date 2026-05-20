@@ -512,7 +512,7 @@ export default function jiraExtension(pi: ExtensionAPI) {
       "Load a Jira ticket, set up a branch, and start planning (e.g. /ticket TEAM-123 [subtask summary])",
     handler: async (args, _ctx) => {
       if (!args?.trim()) {
-        pi.sendUserMessage("Which Jira ticket would you like to work on? Please provide the ticket key.");
+        pi.sendUserMessage("I ran /ticket without a ticket key. Ask me which ticket I want to work on, then run through the ticket workflow once I reply.");
         return;
       }
 
