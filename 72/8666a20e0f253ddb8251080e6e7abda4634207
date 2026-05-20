@@ -1,0 +1,29 @@
+install.sh
+  s_79de9ff74e4491::t_6ce788ba07d8d4 1-27
+index.ts
+  s_79de9ff74e4491::t_33a8e5e27c91ac 1-634
+uninstall.sh
+  s_79de9ff74e4491::t_6d6669ef332192 1-6
+README.md
+  s_79de9ff74e4491::t_b44715e275086a 1-71
+.gitignore
+  s_79de9ff74e4491::t_e84ddc09eff0cb 4-6
+package.json
+  s_79de9ff74e4491::t_1c362f622f95dc 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "728666a20e0f253ddb8251080e6e7abda4634207",
+  "prompts": {},
+  "sessions": {
+    "s_79de9ff74e4491": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e3fcc-98ae-73cd-b47a-eb71098d324a",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
