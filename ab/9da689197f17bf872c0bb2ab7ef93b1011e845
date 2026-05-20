@@ -1,0 +1,19 @@
+README.md
+  s_79de9ff74e4491::t_b44715e275086a 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "ab9da689197f17bf872c0bb2ab7ef93b1011e845",
+  "prompts": {},
+  "sessions": {
+    "s_79de9ff74e4491": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e3fcc-98ae-73cd-b47a-eb71098d324a",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
