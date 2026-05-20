@@ -510,12 +510,9 @@ export default function jiraExtension(pi: ExtensionAPI) {
   pi.registerCommand("ticket", {
     description:
       "Load a Jira ticket, set up a branch, and start planning (e.g. /ticket TEAM-123 [subtask summary])",
-    handler: async (args, ctx) => {
+    handler: async (args, _ctx) => {
       if (!args?.trim()) {
-        ctx.ui.notify(
-          "Usage: /ticket TEAM-123 [optional subtask summary]",
-          "error"
-        );
+        pi.sendUserMessage("Which Jira ticket would you like to work on? Please provide the ticket key.");
         return;
       }
 
