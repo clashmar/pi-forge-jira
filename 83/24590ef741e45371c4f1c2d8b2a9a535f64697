@@ -1,0 +1,20 @@
+README.md
+  s_79de9ff74e4491::t_64bf38d8712a81 79,85
+  s_79de9ff74e4491::t_4bc8c8ccfc7906 9-11,13-15,17-18,21-23,25-32,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "8324590ef741e45371c4f1c2d8b2a9a535f64697",
+  "prompts": {},
+  "sessions": {
+    "s_79de9ff74e4491": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e3fcc-98ae-73cd-b47a-eb71098d324a",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
