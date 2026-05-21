@@ -1,0 +1,21 @@
+uninstall.sh
+  s_21b74386ef7db8::t_8edaaa4bc452a4 5
+install.sh
+  s_21b74386ef7db8::t_fcb57094d1d234 12-14,17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "d75b157a82712a8dae3d56211861960589bd6131",
+  "prompts": {},
+  "sessions": {
+    "s_21b74386ef7db8": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e49fc-4b3a-758d-9db4-e85e11a3f899",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
