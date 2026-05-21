@@ -15,7 +15,7 @@ Set the following environment variables in your shell config or system environme
 | `JIRA_API_TOKEN` | ✓ | [Create a token](https://id.atlassian.com/manage-profile/security/api-tokens) |
 | `JIRA_TEAM_PREFIX` | recommended | Your Jira team prefix (e.g. `TEAM`) — enables `/ticket 2400` shorthand |
 
-**macOS / Linux (bash or zsh)** — add to `~/.zshrc`, `~/.bashrc`, or equivalent:
+**macOS / Linux** — add to `~/.zshenv` (preferred — sourced by all shell sessions, including non-interactive ones like pi):
 
 ```bash
 export JIRA_BASE_URL="https://your-org.atlassian.net"

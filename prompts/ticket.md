@@ -14,6 +14,10 @@ Update the footer with set_context (ticket link).
 
 {{SUBTASK_INSTRUCTION}}
 
+When creating a subtask, prefix its summary with the full ticket key:
+`{{TEAM_PREFIX}}-XXXX: short description of the task`
+The subtask key assigned by Jira must match the branch created in Step 3.
+
 ## 3. Branch Setup
 
 Check the current branch (git branch --show-current).

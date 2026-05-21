@@ -36,6 +36,10 @@
 3. Commit using this format exactly:
    {{TEAM_PREFIX}}-XXXX short description of what this commit does
    The {{TEAM_PREFIX}}-XXXX should match the ticket/subtask number.
+   - No `type(domain):` prefix
+   - No trailing period
+   - Under 72 characters
+   - Lowercase description after the ticket key
 
 ## Pull Request
 
