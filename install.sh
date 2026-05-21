@@ -9,13 +9,13 @@ mkdir -p "$EXTENSION_DIR"
 
 # If an existing real directory is present (not a symlink), remove it first.
 # ln -sfn won't replace a directory — it would create a symlink inside it.
-if [[ -d "$EXTENSION_DIR/jira" && ! -L "$EXTENSION_DIR/jira" ]]; then
-  rm -rf "$EXTENSION_DIR/jira"
-  echo "✓ Removed existing jira directory"
+if [[ -d "$EXTENSION_DIR/pi-forge-jira" && ! -L "$EXTENSION_DIR/pi-forge-jira" ]]; then
+  rm -rf "$EXTENSION_DIR/pi-forge-jira"
+  echo "✓ Removed existing pi-forge-jira directory"
 fi
 
-ln -sfn "$REPO_DIR" "$EXTENSION_DIR/jira"
-echo "✓ Linked $EXTENSION_DIR/jira → $REPO_DIR"
+ln -sfn "$REPO_DIR" "$EXTENSION_DIR/pi-forge-jira"
+echo "✓ Linked $EXTENSION_DIR/pi-forge-jira → $REPO_DIR"
 
 for f in ship.md load-ticket.md; do
   if [[ -f "$PROMPTS_DIR/$f" ]]; then
