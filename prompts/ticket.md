@@ -33,6 +33,7 @@ If on a different branch or on main:
 
 ## 4. Planning
 
-- Invoke the planning skill to turn the ticket requirements into a design before any code is written.
-- Before asking any questions, explore relevant project context using parallel subagents. 
+- Invoke any planning skills avaialable to turn the ticket requirements into a design before any code is written.
+- If planning specific skills are not avaiable, plan the ticket with the user without them.
+- Before asking any questions, explore relevant project context using parallel subagents.
 - Follow the full planning process through to an approved design and written spec.
