@@ -1,4 +1,4 @@
-# pi-smart-footer
+# pi-forge-jira
 
 Contribution guidelines for contributing to pi-forge-jira.
 

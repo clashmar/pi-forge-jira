@@ -5,6 +5,7 @@
  *   - `jira_ticket` tool: fetch ticket details
  *   - `jira_create_subtask` tool: create sub-tasks
  *   - `jira_transition` tool: move tickets between statuses
+ *   - `jira_update_ticket` tool: update ticket fields and add comments
  *   - `/ticket` command: load a ticket, set up a branch, and start planning
  *   - `/ship` command: stage, commit, push, open PR, move to Code Review
  *
@@ -159,6 +160,56 @@ function adfToText(node: unknown, depth = 0): string {
   return "";
 }
 
+// Convert plain text to minimal ADF. Double newlines → paragraphs, single newlines → hardBreak.
+function textToAdf(text: string): object {
+  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim().length > 0);
+  return {
+    type: "doc",
+    version: 1,
+    content: paragraphs.map((para) => {
+      const lines = para.split("\n");
+      const content: object[] = [];
+      lines.forEach((line, i) => {
+        content.push({ type: "text", text: line });
+        if (i < lines.length - 1) {
+          content.push({ type: "hardBreak" });
+        }
+      });
+      return { type: "paragraph", content };
+    }),
+  };
+}
+
+// Resolve email → accountId via user search; pass through non-email strings as accountId.
+async function resolveAssignee(
+  assignee: string,
+  baseUrl: string,
+  email: string,
+  token: string
+): Promise<string> {
+  if (!assignee.includes("@")) {
+    return assignee; // already an accountId
+  }
+
+  const url = `${baseUrl}/rest/api/3/user/search?query=${encodeURIComponent(assignee)}`;
+  const res = await fetch(url, { headers: headers(email, token) });
+
+  if (!res.ok) {
+    throw new Error(`Failed to search for user "${assignee}": ${res.status}`);
+  }
+
+  const users = (await res.json()) as Array<{
+    accountId: string;
+    displayName: string;
+  }>;
+
+  if (!users.length) {
+    throw new Error(`Could not find Jira user with email ${assignee}`);
+  }
+
+  return users[0].accountId;
+}
+
 function formatDescription(description: unknown): string {
   if (!description) return "(no description)";
   if (typeof description === "string") return description;
@@ -282,6 +333,156 @@ async function transitionToInProgress(issueKey: string): Promise<void> {
     headers: headers(email, token),
     body: JSON.stringify({ transition: { id: transition.id } }),
   });
+}
+
+interface UpdateTicketParams {
+  key: string;
+  summary?: string;
+  description?: string;
+  labels?: string[];
+  priority?: string;
+  assignee?: string;
+  story_points?: number;
+  comment?: string;
+}
+
+interface UpdateTicketResult {
+  updatedFields: string[];
+  commentAdded: boolean;
+  commentError?: string;
+}
+
+async function updateTicket(
+  params: UpdateTicketParams
+): Promise<UpdateTicketResult> {
+  const { baseUrl, email, token } = getConfig();
+  const { key, summary, description, labels, priority, assignee, story_points, comment } = params;
+
+  const updatedFields: string[] = [];
+
+  // ── Build field update payload ───────────────────────────────────────────
+
+  const fields: Record<string, unknown> = {};
+
+  if (summary !== undefined) {
+    fields.summary = summary;
+    updatedFields.push("summary");
+  }
+
+  if (description !== undefined) {
+    fields.description = textToAdf(description);
+    updatedFields.push("description");
+  }
+
+  if (labels !== undefined) {
+    fields.labels = labels;
+    updatedFields.push("labels");
+  }
+
+  if (priority !== undefined) {
+    fields.priority = { name: priority };
+    updatedFields.push("priority");
+  }
+
+  if (assignee !== undefined) {
+    const accountId = await resolveAssignee(assignee, baseUrl, email, token);
+    fields.assignee = { accountId };
+    updatedFields.push("assignee");
+  }
+
+  if (story_points !== undefined) {
+    // customfield_10016 is the standard Jira Cloud story points field.
+    fields["customfield_10016"] = story_points;
+    updatedFields.push("story_points");
+  }
+
+  // ── Make API calls in parallel ───────────────────────────────────────────
+
+  type FieldResult = { type: "fields"; ok: true } | { type: "fields"; ok: false; error: Error };
+  type CommentResult = { type: "comment"; ok: true } | { type: "comment"; ok: false; error: Error };
+
+  const tasks: Promise<FieldResult | CommentResult>[] = [];
+
+  if (updatedFields.length > 0) {
+    const fieldUpdateUrl = `${baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}`;
+    tasks.push(
+      fetch(fieldUpdateUrl, {
+        method: "PUT",
+        headers: headers(email, token),
+        body: JSON.stringify({ fields }),
+      }).then(async (res): Promise<FieldResult> => {
+        if (res.ok) return { type: "fields", ok: true };
+        const body = await res.text().catch(() => "");
+        if (res.status === 404) throw new Error(`Ticket ${key} not found`);
+        if (res.status === 403)
+          throw new Error(`You don't have permission to edit ${key}`);
+        const parsed = (() => {
+          try {
+            return JSON.parse(body);
+          } catch {
+            return null;
+          }
+        })();
+        const errorMessages = (parsed as Record<string, unknown> | null)?.errorMessages;
+        const errorFields = (parsed as Record<string, unknown> | null)?.errors;
+        const detail =
+          (Array.isArray(errorMessages) ? errorMessages.join(", ") : undefined) ||
+          (errorFields && typeof errorFields === "object"
+            ? Object.entries(errorFields as Record<string, string>)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(", ")
+            : undefined) ||
+          body;
+        throw new Error(`Jira API error ${res.status}: ${detail}`);
+      })
+    );
+  }
+
+  if (comment !== undefined) {
+    const commentUrl = `${baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}/comment`;
+    tasks.push(
+      fetch(commentUrl, {
+        method: "POST",
+        headers: headers(email, token),
+        body: JSON.stringify({ body: textToAdf(comment) }),
+      }).then(async (res): Promise<CommentResult> => {
+        if (res.ok) return { type: "comment", ok: true };
+        const errBody = await res.text().catch(() => "");
+        if (res.status === 404) throw new Error(`Ticket ${key} not found`);
+        return {
+          type: "comment",
+          ok: false,
+          error: new Error(`Comment failed (${res.status}): ${errBody}`),
+        };
+      })
+    );
+  }
+
+  const results = await Promise.allSettled(tasks);
+
+  let commentAdded = false;
+  let commentError: string | undefined;
+
+  for (const result of results) {
+    if (result.status === "rejected") {
+      // Fatal errors (404, 403, field API errors) propagate
+      throw result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+    }
+    if (result.value.type === "comment") {
+      if (result.value.ok) {
+        commentAdded = true;
+      } else {
+        commentError = result.value.error.message;
+      }
+    }
+  }
+
+  // If only a comment was requested and it failed non-fatally, surface as error
+  if (comment !== undefined && !commentAdded && commentError !== undefined && updatedFields.length === 0) {
+    throw new Error(commentError);
+  }
+
+  return { updatedFields, commentAdded, commentError };
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────
@@ -501,6 +702,153 @@ export default function jiraExtension(pi: ExtensionAPI) {
           },
         ],
         details: { key, status: transition.to.name },
+      };
+    },
+  });
+
+  // ── jira_update_ticket tool ───────────────────────────────────────────────
+
+  pi.registerTool({
+    name: "jira_update_ticket",
+    label: "Update Jira Ticket",
+    description:
+      "Update one or more fields on an existing Jira ticket. " +
+      "Call this when the user asks to change a ticket's summary, description, labels, priority, assignee, or story points, or to add a comment. " +
+      "Only provide the fields you want to change — omitted fields are left untouched. " +
+      "Labels are a full replacement — if you want to add a label, first call jira_ticket to retrieve the current labels, then pass the merged array. " +
+      "Pass comment to append a note without changing any fields.",
+    promptSnippet: "Update Jira ticket fields or add a comment",
+    promptGuidelines: [
+      "Use jira_update_ticket when the user asks to change a ticket's fields or add a comment",
+      "Only pass the fields you want to change — omitted fields are left untouched",
+      "Labels replace the full label array — fetch the ticket first if you only want to add/remove one label",
+    ],
+    parameters: Type.Object({
+      key: Type.String({
+        description: 'Jira issue key, e.g. "PHOEN-1234"',
+      }),
+      summary: Type.Optional(
+        Type.String({ description: "Replaces the ticket title entirely. Use the full desired title." })
+      ),
+      description: Type.Optional(
+        Type.String({
+          description:
+            "Replaces the full description. Plain text — no ADF needed. Use the full intended description.",
+        })
+      ),
+      labels: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "Full replacement of the label list. Call jira_ticket first if you only want to add/remove one label.",
+        })
+      ),
+      priority: Type.Optional(
+        Type.Union(
+          [
+            Type.Literal("P1"),
+            Type.Literal("P2"),
+            Type.Literal("P3"),
+            Type.Literal("P4"),
+            Type.Literal("P5"),
+          ],
+          { description: "Priority level. P1 is most urgent, P5 is lowest." }
+        )
+      ),
+      assignee: Type.Optional(
+        Type.String({
+          description:
+            "The user's Jira account ID or email address. Email is resolved to accountId automatically.",
+        })
+      ),
+      story_points: Type.Optional(
+        Type.Number({ description: "Numeric story point estimate." })
+      ),
+      comment: Type.Optional(
+        Type.String({
+          description:
+            "Plain text to append as a new comment. Can be used alone or alongside field updates.",
+        })
+      ),
+    }),
+    async execute(_id, params, _signal, _onUpdate, _ctx) {
+      const { key, summary, description, labels, priority, assignee, story_points, comment } = params;
+
+      const hasFieldChange =
+        summary !== undefined ||
+        description !== undefined ||
+        labels !== undefined ||
+        priority !== undefined ||
+        assignee !== undefined ||
+        story_points !== undefined;
+
+      if (!hasFieldChange && comment === undefined) {
+        throw new Error("Nothing to update — provide at least one field to change");
+      }
+
+      if (summary !== undefined && summary.trim().length === 0) {
+        throw new Error("Summary cannot be blank");
+      }
+
+      if (assignee !== undefined && assignee.trim().length === 0) {
+        throw new Error("Assignee cannot be blank");
+      }
+
+      if (description !== undefined && description.trim().length === 0) {
+        throw new Error("Description cannot be blank");
+      }
+
+      if (comment !== undefined && comment.trim().length === 0) {
+        throw new Error("Comment cannot be blank");
+      }
+
+      const normalizedKey = key.toUpperCase().trim();
+      const result = await updateTicket({
+        key: normalizedKey,
+        summary,
+        description,
+        labels,
+        priority,
+        assignee: assignee?.trim(),
+        story_points,
+        comment,
+      });
+
+      const lines: string[] = [];
+
+      if (result.updatedFields.length > 0) {
+        lines.push(`Updated ${normalizedKey}:`);
+        for (const field of result.updatedFields) {
+          const value = (() => {
+            switch (field) {
+              case "summary": return summary;
+              case "description": return "(updated)";
+              case "labels": return labels?.join(", ") ?? "";
+              case "priority": return priority;
+              case "assignee": return assignee;
+              case "story_points": return String(story_points);
+              default: return "(updated)";
+            }
+          })();
+          lines.push(`• ${field} → ${value}`);
+        }
+        if (result.commentAdded) {
+          lines.push("• Added comment ✓");
+        }
+      } else if (result.commentAdded) {
+        lines.push(`Added comment to ${normalizedKey} ✓`);
+      }
+
+      if (result.commentError) {
+        lines.push(`⚠️ ${result.commentError}`);
+      }
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        details: {
+          key: normalizedKey,
+          updatedFields: result.updatedFields,
+          commentAdded: result.commentAdded,
+        },
       };
     },
   });
