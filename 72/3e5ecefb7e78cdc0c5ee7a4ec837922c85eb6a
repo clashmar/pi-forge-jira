@@ -1,0 +1,21 @@
+index.ts
+  s_67f2c465a6f077::t_964b43a94a7e49 746-755
+AGENTS.md
+  s_67f2c465a6f077::t_dc1c2457488d41 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "723e5ecefb7e78cdc0c5ee7a4ec837922c85eb6a",
+  "prompts": {},
+  "sessions": {
+    "s_67f2c465a6f077": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e4af8-e702-768f-93fd-45c2953492fd",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
