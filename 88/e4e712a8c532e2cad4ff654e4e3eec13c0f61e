@@ -1,0 +1,34 @@
+jira/types.ts
+  s_165a689f5c14fe::t_82895594906480 35-63
+prompts/write-ticket.md
+  s_165a689f5c14fe::t_e47c9afd121e2a 87
+  s_165a689f5c14fe::t_356bebcad48bd7 1-84,88-93,95-193
+commands/write-ticket.ts
+  s_165a689f5c14fe::t_9796f5dc9af7b2 1-33
+jira/api.ts
+  s_165a689f5c14fe::t_88cd5e52856b72 41-164
+  s_165a689f5c14fe::t_e339d3316a2a00 1
+  s_165a689f5c14fe::t_c32b5d673556c2 2-3
+jira/adf.ts
+  s_165a689f5c14fe::t_cabbe0d4900f95 130-185
+tools/jira-create-ticket.ts
+  s_165a689f5c14fe::t_aff0aaadf6bc3a 1-99
+index.ts
+  s_165a689f5c14fe::t_f8470a08e7fdab 7,12,31,36,40,45,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "88e4e712a8c532e2cad4ff654e4e3eec13c0f61e",
+  "prompts": {},
+  "sessions": {
+    "s_165a689f5c14fe": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e68bf-73e2-73f3-b468-f2a3ea50326b",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
