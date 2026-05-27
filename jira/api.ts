@@ -1,6 +1,6 @@
-import { getConfig, headers, BOARD_ID, SUBTASK_TYPE_ID, ASSIGNEE_ACCOUNT_ID } from "./config";
-import { textToAdf } from "./adf";
-import type { JiraIssue, JiraSprint } from "./types";
+import { getConfig, headers, BOARD_ID, SUBTASK_TYPE_ID, ASSIGNEE_ACCOUNT_ID, TEAM_PREFIX } from "./config";
+import { textToAdf, richTextToAdf } from "./adf";
+import type { JiraIssue, JiraSprint, JiraEpic, IssueLinkParams, CreateTicketParams } from "./types";
 
 export async function fetchIssue(key: string): Promise<JiraIssue> {
   const { baseUrl, email, token } = getConfig();
@@ -36,6 +36,130 @@ export async function fetchActiveSprint(): Promise<JiraSprint | null> {
 
   const data = (await res.json()) as { values: JiraSprint[] };
   return data.values?.[0] ?? null;
+}
+
+export async function fetchSprints(): Promise<JiraSprint[]> {
+  const { baseUrl, email, token } = getConfig();
+  const url = `${baseUrl}/rest/agile/1.0/board/${BOARD_ID}/sprint?state=active,future`;
+  const res = await fetch(url, { headers: headers(email, token) });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { values: JiraSprint[] };
+  return data.values ?? [];
+}
+
+export async function fetchEpics(): Promise<JiraEpic[]> {
+  const { baseUrl, email, token } = getConfig();
+  if (!TEAM_PREFIX) return [];
+  const jql = encodeURIComponent(
+    `project=${TEAM_PREFIX} AND issuetype=Epic AND statusCategory!=Done ORDER BY created DESC`
+  );
+  const url = `${baseUrl}/rest/api/3/search?jql=${jql}&fields=summary,status&maxResults=50`;
+  const res = await fetch(url, { headers: headers(email, token) });
+  if (!res.ok) return [];
+  const data = (await res.json()) as {
+    issues: Array<{ key: string; fields: { summary: string; status: { name: string } } }>;
+  };
+  return (data.issues ?? []).map(i => ({
+    key: i.key,
+    fields: { summary: i.fields.summary, status: i.fields.status },
+  }));
+}
+
+export async function createIssueLink(params: IssueLinkParams): Promise<void> {
+  const { baseUrl, email, token } = getConfig();
+  const res = await fetch(`${baseUrl}/rest/api/3/issueLink`, {
+    method: 'POST',
+    headers: headers(email, token),
+    body: JSON.stringify({
+      type: { name: params.linkType },
+      inwardIssue: { key: params.inwardKey },
+      outwardIssue: { key: params.outwardKey },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Failed to create issue link: ${res.status} ${body}`);
+  }
+}
+
+export async function createTicket(params: CreateTicketParams): Promise<{ key: string }> {
+  const { baseUrl, email, token } = getConfig();
+
+  const projectKey = params.parentKey
+    ? await getProjectKey(params.parentKey)
+    : TEAM_PREFIX;
+
+  if (!projectKey) {
+    throw new Error('Cannot determine project key: set JIRA_TEAM_PREFIX or provide a parentKey');
+  }
+
+  const fields: Record<string, unknown> = {
+    project: { key: projectKey },
+    summary: params.summary,
+    issuetype: { name: params.issuetype },
+  };
+
+  if (params.issuetype === 'Epic' && params.epicName) {
+    fields['customfield_10007'] = params.epicName;
+  }
+
+  if (params.issuetype === 'Sub-task' && params.parentKey) {
+    fields.parent = { key: params.parentKey };
+  } else if (params.issuetype !== 'Epic' && params.parentKey) {
+    fields['customfield_10006'] = params.parentKey;
+  }
+
+  if (params.description) {
+    fields.description = richTextToAdf(params.description);
+  }
+
+  if (params.acceptanceCriteria) fields['customfield_13775'] = params.acceptanceCriteria;
+  if (params.dependencies)       fields['customfield_13797'] = params.dependencies;
+  if (params.notesAssumptions)   fields['customfield_13798'] = params.notesAssumptions;
+  if (params.defOfReadyDone)     fields['customfield_13799'] = params.defOfReadyDone;
+  if (params.storyPoints !== undefined) fields['customfield_10002'] = params.storyPoints;
+
+  const res = await fetch(`${baseUrl}/rest/api/3/issue`, {
+    method: 'POST',
+    headers: headers(email, token),
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Failed to create ticket: ${res.status} ${body}`);
+  }
+
+  const created = (await res.json()) as { key: string };
+
+  if (params.sprintId !== undefined) {
+    const sprintRes = await fetch(
+      `${baseUrl}/rest/agile/1.0/sprint/${params.sprintId}/issue`,
+      {
+        method: 'POST',
+        headers: headers(email, token),
+        body: JSON.stringify({ issues: [created.key] }),
+      }
+    );
+    if (!sprintRes.ok) {
+      const sprintBody = await sprintRes.text().catch(() => '');
+      console.warn(`Ticket created but failed to add to sprint: ${sprintRes.status} ${sprintBody}`);
+    }
+  }
+
+  if (params.issueLinks?.length) {
+    await Promise.all(
+      params.issueLinks.map(link =>
+        createIssueLink({
+          inwardKey: created.key,
+          outwardKey: link.key,
+          linkType: link.linkType,
+        })
+      )
+    );
+  }
+
+  return created;
 }
 
 export async function getProjectKey(parentKey: string): Promise<string> {

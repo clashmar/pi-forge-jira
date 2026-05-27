@@ -127,3 +127,59 @@ export function formatIssue(issue: JiraIssue): string {
 
   return lines.join("\n");
 }
+
+/**
+ * Convert structured plain text (with ## and ### heading markers) to ADF.
+ * Lines starting with ### become h3 nodes; ## become h2 nodes.
+ * All other text becomes paragraphs. Used for the ticket description field.
+ */
+export function richTextToAdf(text: string): object {
+  const lines = text.split('\n');
+  const nodes: object[] = [];
+  let pendingLines: string[] = [];
+
+  const flushParagraph = (): void => {
+    const joined = pendingLines.join('\n').trim();
+    if (!joined) {
+      pendingLines = [];
+      return;
+    }
+    const content: object[] = [];
+    const paraLines = joined.split('\n');
+    paraLines.forEach((line, i) => {
+      content.push({ type: 'text', text: line });
+      if (i < paraLines.length - 1) {
+        content.push({ type: 'hardBreak' });
+      }
+    });
+    nodes.push({ type: 'paragraph', content });
+    pendingLines = [];
+  };
+
+  for (const line of lines) {
+    const h3 = line.match(/^###\s+(.+)$/);
+    const h2 = !h3 && line.match(/^##\s+(.+)$/);
+
+    if (h3) {
+      flushParagraph();
+      nodes.push({ type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: h3[1] }] });
+    } else if (h2) {
+      flushParagraph();
+      nodes.push({ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: h2[1] }] });
+    } else if (line.trim() === '') {
+      flushParagraph();
+    } else {
+      pendingLines.push(line);
+    }
+  }
+
+  flushParagraph();
+
+  return {
+    type: 'doc',
+    version: 1,
+    content: nodes.length
+      ? nodes
+      : [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }],
+  };
+}

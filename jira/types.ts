@@ -32,3 +32,32 @@ export interface JiraSprint {
   name: string;
   state: string;
 }
+
+export interface JiraEpic {
+  key: string;
+  fields: {
+    summary: string;
+    status: { name: string };
+  };
+}
+
+export interface IssueLinkParams {
+  inwardKey: string;
+  outwardKey: string;
+  linkType: string;
+}
+
+export interface CreateTicketParams {
+  summary: string;
+  issuetype: 'Epic' | 'Story' | 'Task' | 'Sub-task';
+  epicName?: string;
+  parentKey?: string;
+  sprintId?: number;
+  storyPoints?: number;
+  description?: string;
+  acceptanceCriteria?: string;
+  dependencies?: string;
+  notesAssumptions?: string;
+  defOfReadyDone?: string;
+  issueLinks?: Array<{ key: string; linkType: string }>;
+}
