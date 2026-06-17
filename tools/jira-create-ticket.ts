@@ -62,11 +62,6 @@ export function register(pi: ExtensionAPI): void {
       notesAssumptions: Type.Optional(
         Type.String({ description: "Plain text notes and assumptions (Jira native field)" })
       ),
-      defOfReadyDone: Type.Optional(
-        Type.String({
-          description: "Plain text Definition of Ready / Done checklist (Jira native field)",
-        })
-      ),
       issueLinks: Type.Optional(
         Type.Array(
           Type.Object({

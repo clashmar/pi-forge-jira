@@ -113,10 +113,9 @@ export async function createTicket(params: CreateTicketParams): Promise<{ key: s
     fields.description = richTextToAdf(params.description);
   }
 
-  if (params.acceptanceCriteria) fields['customfield_13775'] = params.acceptanceCriteria;
-  if (params.dependencies)       fields['customfield_13797'] = params.dependencies;
-  if (params.notesAssumptions)   fields['customfield_13798'] = params.notesAssumptions;
-  if (params.defOfReadyDone)     fields['customfield_13799'] = params.defOfReadyDone;
+  if (params.acceptanceCriteria) fields['customfield_13775'] = textToAdf(params.acceptanceCriteria);
+  if (params.dependencies)       fields['customfield_13797'] = textToAdf(params.dependencies);
+  if (params.notesAssumptions)   fields['customfield_13798'] = textToAdf(params.notesAssumptions);
   if (params.storyPoints !== undefined) fields['customfield_10002'] = params.storyPoints;
 
   const res = await fetch(`${baseUrl}/rest/api/3/issue`, {

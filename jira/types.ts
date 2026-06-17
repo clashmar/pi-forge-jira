@@ -58,6 +58,5 @@ export interface CreateTicketParams {
   acceptanceCriteria?: string;
   dependencies?: string;
   notesAssumptions?: string;
-  defOfReadyDone?: string;
   issueLinks?: Array<{ key: string; linkType: string }>;
 }
