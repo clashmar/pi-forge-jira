@@ -1,0 +1,30 @@
+jira/api.ts
+  s_165a689f5c14fe::t_3b572cea742a3a 116-118
+prompts/write-ticket.md
+  s_165a689f5c14fe::t_a21a15737bb94c 67,69,71-86,88,90-94,96,98,100,108,131,143,149,155,165,167,171,173,175-177
+  s_9743f7c98ba760::t_4f04ed6ece5d31 25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "6120a6e432b0acf6d8da1fb1e05a0e5d321a30d4",
+  "prompts": {},
+  "sessions": {
+    "s_165a689f5c14fe": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e68bf-73e2-73f3-b468-f2a3ea50326b",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    },
+    "s_9743f7c98ba760": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e6efd-e6fe-74b2-833f-cfb65fb50cbd",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "Charlie Lashmar <c.lashmar08@gmail.com>"
+    }
+  }
+}
