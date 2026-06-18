@@ -20,7 +20,7 @@ export function register(pi: ExtensionAPI): void {
     ],
     parameters: Type.Object({
       key: Type.String({
-        description: 'Jira issue key, e.g. "PHOEN-1234"',
+        description: 'Jira issue key, e.g. "PHX-1234"',
       }),
       summary: Type.Optional(
         Type.String({ description: "Replaces the ticket title entirely. Use the full desired title." })
